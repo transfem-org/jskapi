@@ -96,7 +96,7 @@ async function downloadTemp(name, url, tempDir, alwaysReturn) {
 }
 
 getInstancesInfos()
-	.then(async ({alives, deads, notMisskey, outdated, versions, versionOutput}) => {
+	.then(async ({alives, deads, outdated, versions, versionOutput}) => {
 		fs.writeFile('./dist/versions.json', JSON.stringify(versionOutput), () => { })
 
 		const stats = alives.reduce((prev, v) => (v.nodeinfo.usage && v.nodeinfo.usage.users) ? {
@@ -108,7 +108,6 @@ getInstancesInfos()
 
 		fs.writeFile('./dist/alives.txt', alives.map(v => v.url).join('\n'), () => { })
 		fs.writeFile('./dist/deads.txt', deads.map(v => v.url).join('\n'), () => { })
-		fs.writeFile('./dist/not-misskey.txt', notMisskey.map(v => v.url).join('\n'), () => { })
 		fs.writeFile('./dist/outdated.txt', outdated.map(v => v.url).join('\n'), () => { })
 
 		await mkdirp('./dist/instance-banners')

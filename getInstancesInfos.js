@@ -23,7 +23,7 @@ function safeFetch(method, url, options)/*: Promise<Response | null | false | un
 	// glog("POST start", url)
 	return fetch(url, extend(true, options, { method, signal: controller.signal })).then(
 		res => {
-			if (res && res.ok) {
+			if (res?.ok) {
 				const end = performance.now();
 				if (end - start > 1000) {
 					glog.warn("POST slow", url, (end - start) / 1000)
@@ -93,7 +93,7 @@ async function getNodeinfo(base)/*: Promise<Response | null | false | undefined>
 		redirect: "error",
 		signal: controller.signal
 	}).then(res => {
-		if (res && res.ok) {
+		if (res?.ok) {
 			glog("Get WellKnown Nodeinfo finish", wellnownUrl, res.status, res.ok)
 			return res.json();
 		}
@@ -136,7 +136,7 @@ async function getNodeinfo(base)/*: Promise<Response | null | false | undefined>
 		redirect: "error",
 		signal: controller2.signal
 	}).then(res => {
-		if (res && res.ok) {
+		if (res?.ok) {
 			glog("Get Nodeinfo finish", link.href, res.status, res.ok)
 			return res.json();
 		}
@@ -251,39 +251,6 @@ async function getVersions() {
 		const res1 = await fetch(`https://api.github.com/repos/${repo}/releases`, { headers: ghHeaders })
 		const link = res1.headers.get("link")
 		const max = link && Math.min(Number(maxRegExp.exec(link)[1]), repo === "misskey-dev/misskey" ? 99999 : 4)
-
-		const resp = (await Promise.all([Promise.resolve(res1), ...(!link ? []
-			: Array(max - 1).fill()
-				.map((v, i) => `https://api.github.com/repos/${repo}/releases?page=${i + 2}`)
-				.map(url => vqueue.add(() => fetch(url, { headers: ghHeaders }))))]
-
-			.map((resa, i) => resa.then(
-				res => res.json(),
-				e => {
-					glog(repo, "Error(fetch)", e)
-					return Promise.resolve([])
-				}
-			).then(
-				json => json.map((release, j) => {
-					// glog("Misskey Version", release.tag_name)
-					const version = semver.clean(release.tag_name, { loose: true });
-					versions.set(version, {
-						repo,
-						count: i * 30 + j,
-						hasVulnerability: hasVulnerability(repo, version),
-					})
-					return release.tag_name
-				}),
-				e => {
-					glog(repo, "Error(json)", e)
-					return Promise.resolve([])
-				}
-			).catch(e => { throw Error(e) })
-
-			))).flat(1)
-
-		versionOutput[repo] = resp;
-		glog(repo, "Finish", resp.length)
 	}
 
 	glog("Got Misskey Versions")
@@ -294,7 +261,9 @@ export const getInstancesInfos = async function () {
 	glog("Getting Instances' Infos")
 
 	const promises = [];
-	const alives = [], deads = [], notMisskey = [], outdated = [];
+	const alives = [];
+	const deads = [];
+	const outdated = [];
 
 	const { versions, versionOutput } = await getVersions()
 
@@ -309,21 +278,13 @@ export const getInstancesInfos = async function () {
 				return;
 			}
 
-			if (nodeinfo.software.name !== "misskey") {
-				notMisskey.push({
-					nodeinfo,
-					...instance
-				});
-				return;
-			}
-
 			const versionInfo = (() => {
 				const sem1 = semver.clean(nodeinfo.software.version, { loose: true })
 				if (versions.has(sem1)) return { just: true, ...versions.get(sem1) };
 				const sem2 = semver.valid(semver.coerce(nodeinfo.software.version))
 				let current = { repo: 'misskey-dev/misskey', count: 1500 };
 				for (const [key, value] of versions.entries()) {
-					if (sem1 && sem1.startsWith(key)) {
+					if (sem1?.startsWith(key)) {
 						if (value.count === 0) return { just: false, ...value };
 						else if (current.count >= value.count) current = { just: false, ...value };
 					} else if (sem2 && value.repo == 'misskey-dev/misskey' && sem2.startsWith(key)) {
@@ -400,7 +361,6 @@ export const getInstancesInfos = async function () {
 	return {
 		alives: alives.sort((a, b) => (b.value || 0) - (a.value || 0)),
 		deads,
-		notMisskey,
 		outdated,
 		versions,
 		versionOutput,
