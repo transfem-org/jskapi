@@ -1,20 +1,12 @@
 # api
-joinmisskey servers' information api
+joinmisskey servers' information api forked for Calckey
 
-https://instanceapp.misskey.page/instances.json
+https://api.calckey.org/instances.json
 
-**This API doesn't follow forks that say `nodeinfo.software.name !== 'misskey'`.**
-
-## Build Environment
-You must set following two envs.
-
-- `LB_TOKEN`= GitHub Token (to get versions)
-- `MK_TOKEN`= Misskey Token（to post to misskey）
 
 ## Endpoints
-We are only serving static files via nginx and Cloudflare, so we have no access restrictions.
 
-You can get the following information under https://instanceapp.misskey.page
+Served statically by `npx serve dist/`
 
 ### /instances.json
 
