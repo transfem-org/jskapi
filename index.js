@@ -119,7 +119,7 @@ getInstancesInfos()
 		for (const instance of alives) {
 			if (instance.meta.bannerUrl) {
 				instancesInfosPromises.push(infoQueue.add(async () => {
-					console(`downloading banner for ${instance.url}`)
+					console.log(`downloading banner for ${instance.url}`)
 					const res = await downloadTemp(`${instance.url}`, (new URL(instance.meta.bannerUrl, `https://${instance.url}`)).toString(), `./temp/instance-banners/`, true)
 					if (res) instance.banner = true
 					else instance.banner = false
@@ -151,7 +151,7 @@ getInstancesInfos()
 
 			if (instance.meta.backgroundImageUrl) {
 				instancesInfosPromises.push(infoQueue.add(async () => {
-					console(`downloading background image for ${instance.url}`)
+					console.log(`downloading background image for ${instance.url}`)
 					const res = await downloadTemp(`${instance.url}`, (new URL(instance.meta.backgroundImageUrl, `https://${instance.url}`)).toString(), `./temp/instance-backgrounds/`, true)
 					if (res) instance.background = true
 					else instance.background = false
@@ -184,7 +184,7 @@ getInstancesInfos()
 
 			if (instance.meta.iconUrl) {
 				instancesInfosPromises.push(infoQueue.add(async () => {
-					console(`downloading icon image for ${instance.url}`)
+					console.log(`downloading icon image for ${instance.url}`)
 					const res = await downloadTemp(`${instance.url}`, (new URL(instance.meta.iconUrl, `https://${instance.url}`)).toString(), `./temp/instance-icons/`, true)
 					if (res) instance.icon = true
 					else instance.icon = false
@@ -226,7 +226,7 @@ getInstancesInfos()
 
 		fs.writeFile('./dist/instances.json', JSON.stringify(INSTANCES_JSON), () => { })
 
-		console('FINISHED!')
+		console.log('FINISHED!')
 		return INSTANCES_JSON;
 	})
 
