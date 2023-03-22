@@ -282,18 +282,6 @@ https://calckey.org/`,
 			}
 		}).then(res => res.json());
 
-		tree = await fetch("https://calckey.social/api/notes/create", {
-			method: "POST",
-			body: JSON.stringify({
-				i: process.env.MK_TOKEN,
-				text: `Top 30 instances (other than Japanese)\n\n${getInstancesList(otherInstances)}`,
-				replyId: tree.createdNote.id,
-			}),
-			headers: {
-				"Content-Type": "application/json"
-			}
-		}).then(res => res.json());
-
 	})
 
 	.then(async () => {
