@@ -16,8 +16,6 @@ const invalid = mylist.filter(e => e.langs !== undefined && !Array.isArray(e.lan
 if (invalid.length > 0) console.log(`Invalid:\n  ${invalid.join(",\n  ")}\n`);
 
 export default async () => {
-	console.log(`Get servers from misskey.io`);
-
 	const notIncluded = new Set();
 	const apinum = 60
 	let next = true
@@ -33,7 +31,7 @@ export default async () => {
 
 		const hrstart = process.hrtime()
 
-		const l = await fetch("https://calckey.social/api/federation/instances", {
+		const l = await fetch("https://stop.voring.me/api/federation/instances", {
 			method: 'POST',
 			body: JSON.stringify(body),
 			headers: {

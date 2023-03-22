@@ -237,14 +237,14 @@ getInstancesInfos()
 			method: "POST",
 			body: JSON.stringify({
 				i: process.env.MK_TOKEN,
-				text: `JoinMisskey servers api is updated at ${INSTANCES_JSON.date.toISOString()}.
+				text: `I've pinged all visible Calckey servers ${INSTANCES_JSON.date.toISOString()}.
 
 Total Notes: ${INSTANCES_JSON.stats.notesCount}
 Total Users: ${INSTANCES_JSON.stats.usersCount}
 Total MAU: ${INSTANCES_JSON.stats.mau}
 Total Servers: ${INSTANCES_JSON.stats.instancesCount}
 
-https://join.misskey.page/\n#bot #joinmisskeyupdate`,
+https://calckey.org/`,
 			}),
 			headers: {
 				"Content-Type": "application/json"
@@ -267,9 +267,7 @@ https://join.misskey.page/\n#bot #joinmisskeyupdate`,
 		const japaneseInstances = [];
 
 		for (const instance of sorted) {
-			if (instance.langs.includes("ja")) {
-				japaneseInstances.push(instance)
-			}
+			japaneseInstances.push(instance);
 			if (japaneseInstances.length === 30) break;
 		}
 
@@ -277,22 +275,13 @@ https://join.misskey.page/\n#bot #joinmisskeyupdate`,
 			method: "POST",
 			body: JSON.stringify({
 				i: process.env.MK_TOKEN,
-				text: `日本語サーバー (トップ30)\n\n${getInstancesList(japaneseInstances)}`,
+				text: `Top 30 instances:\n${getInstancesList(japaneseInstances)}`,
 				replyId: tree.createdNote.id,
 			}),
 			headers: {
 				"Content-Type": "application/json"
 			}
 		}).then(res => res.json());
-
-		// 2. English
-		const otherInstances = [];
-
-		for (const instance of sorted) {
-			if (instance.langs.includes("ja")) continue;
-			otherInstances.push(instance);
-			if (otherInstances.length === 30) break;
-		}
 
 		tree = await fetch("https://calckey.social/api/notes/create", {
 			method: "POST",
@@ -317,7 +306,7 @@ https://join.misskey.page/\n#bot #joinmisskeyupdate`,
 			method: "POST",
 			body: JSON.stringify({
 				i: process.env.MK_TOKEN,
-				text: `JoinMisskey servers api is now updated.\nUNLISTED INSTANCE(S) FOUND! @aqz\n\n${notIncluded.join('\n')}\n#bot`
+				text: `New instances found!\n${notIncluded.join('\n').replace("\n", "\n -")}`
 			}),
 			headers: {
 				"Content-Type": "application/json"
