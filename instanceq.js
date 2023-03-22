@@ -33,7 +33,7 @@ export default async () => {
 
 		const hrstart = process.hrtime()
 
-		const l = await fetch("https://misskey.io/api/federation/instances", {
+		const l = await fetch("https://calckey.social/api/federation/instances", {
 			method: 'POST',
 			body: JSON.stringify(body),
 			headers: {
@@ -44,7 +44,7 @@ export default async () => {
 			console.log(body, hrend[0], hrend[1] / 1000000)
 
 			const text = await res.text()
-			if (!text.startsWith("{") && !text.startsWith("[")) {
+			if (!(text.startsWith("{") || text.startsWith("["))) {
 				throw Error(text)
 			}
 
@@ -57,7 +57,7 @@ export default async () => {
 		for (const e of l) {
 			if (
 				!ignorehosts.some(x => x === e.host) &&
-				e.softwareName === 'misskey' &&
+				e.softwareName === 'calckey' &&
 				(e.latestStatus === null || e.isNotResponding === false) &&
 				!mylist.some(x => x.url === e.host)
 			) {

@@ -233,7 +233,7 @@ getInstancesInfos()
 
 	.then(async INSTANCES_JSON => {
 		// 0. Statistics
-		let tree = await fetch("https://p1.a9z.dev/api/notes/create", {
+		let tree = await fetch("https://calckey.social/api/notes/create", {
 			method: "POST",
 			body: JSON.stringify({
 				i: process.env.MK_TOKEN,
@@ -273,7 +273,7 @@ https://join.misskey.page/\n#bot #joinmisskeyupdate`,
 			if (japaneseInstances.length === 30) break;
 		}
 
-		tree = await fetch("https://p1.a9z.dev/api/notes/create", {
+		tree = await fetch("https://calckey.social/api/notes/create", {
 			method: "POST",
 			body: JSON.stringify({
 				i: process.env.MK_TOKEN,
@@ -294,7 +294,7 @@ https://join.misskey.page/\n#bot #joinmisskeyupdate`,
 			if (otherInstances.length === 30) break;
 		}
 
-		tree = await fetch("https://p1.a9z.dev/api/notes/create", {
+		tree = await fetch("https://calckey.social/api/notes/create", {
 			method: "POST",
 			body: JSON.stringify({
 				i: process.env.MK_TOKEN,
@@ -311,8 +311,9 @@ https://join.misskey.page/\n#bot #joinmisskeyupdate`,
 	.then(async () => {
 		const notIncluded = await instanceq()
 		if (notIncluded.length === 0) return;
+		console.log(notIncluded)
 
-		return fetch("https://p1.a9z.dev/api/notes/create", {
+		return fetch("https://calckey.social/api/notes/create", {
 			method: "POST",
 			body: JSON.stringify({
 				i: process.env.MK_TOKEN,
