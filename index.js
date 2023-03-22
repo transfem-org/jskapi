@@ -1,7 +1,6 @@
 import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import glob from 'glob'
-import glog from 'fancy-log'
 import sharp from 'sharp'
 import { createHash } from 'node:crypto'
 import mkdirp from 'mkdirp'
@@ -49,11 +48,11 @@ async function downloadTemp(name, url, tempDir, alwaysReturn) {
 	})();
 
 	if (typeof request !== 'object') {
-		glog.error(url, 'request fail!')
+		console.error(url, 'request fail!')
 		return clean()
 	}
 	if (!request.ok) {
-		glog.error(url, 'request ng!')
+		console.error(url, 'request ng!')
 		return clean()
 	}
 	const data = await Promise.race([
@@ -61,7 +60,7 @@ async function downloadTemp(name, url, tempDir, alwaysReturn) {
 		new Promise(resolve => setTimeout(() => resolve(false), 10000))
 	])
 	if (!data) {
-		glog.error(url, 'arrayBuffer is null or timeout!')
+		console.error(url, 'arrayBuffer is null or timeout!')
 		return clean()
 	}
 
@@ -77,7 +76,7 @@ async function downloadTemp(name, url, tempDir, alwaysReturn) {
 				return { name, status }
 			})
 			.catch(e => {
-				glog.error('writeFile error', name, e)
+				console.error('writeFile error', name, e)
 				return false
 			})
 	}
@@ -120,7 +119,7 @@ getInstancesInfos()
 		for (const instance of alives) {
 			if (instance.meta.bannerUrl) {
 				instancesInfosPromises.push(infoQueue.add(async () => {
-					glog(`downloading banner for ${instance.url}`)
+					console(`downloading banner for ${instance.url}`)
 					const res = await downloadTemp(`${instance.url}`, (new URL(instance.meta.bannerUrl, `https://${instance.url}`)).toString(), `./temp/instance-banners/`, true)
 					if (res) instance.banner = true
 					else instance.banner = false
@@ -141,7 +140,7 @@ getInstancesInfos()
 							await base.webp({ quality: 75 })
 								.toFile(`./dist/instance-banners/${instance.url}.webp`)
 						} catch (e) {
-							glog.error(`error while processing banner for ${instance.url}`, e);
+							console.error(`error while processing banner for ${instance.url}`, e);
 							instance.banner = false
 						}
 					}
@@ -152,7 +151,7 @@ getInstancesInfos()
 
 			if (instance.meta.backgroundImageUrl) {
 				instancesInfosPromises.push(infoQueue.add(async () => {
-					glog(`downloading background image for ${instance.url}`)
+					console(`downloading background image for ${instance.url}`)
 					const res = await downloadTemp(`${instance.url}`, (new URL(instance.meta.backgroundImageUrl, `https://${instance.url}`)).toString(), `./temp/instance-backgrounds/`, true)
 					if (res) instance.background = true
 					else instance.background = false
@@ -174,7 +173,7 @@ getInstancesInfos()
 							await base.webp({ quality: 75 })
 								.toFile(`./dist/instance-backgrounds/${instance.url}.webp`)
 						} catch (e) {
-							glog.error(`error while processing background for ${instance.url}`, e);
+							console.error(`error while processing background for ${instance.url}`, e);
 							instance.background = false
 						}
 					}
@@ -185,7 +184,7 @@ getInstancesInfos()
 
 			if (instance.meta.iconUrl) {
 				instancesInfosPromises.push(infoQueue.add(async () => {
-					glog(`downloading icon image for ${instance.url}`)
+					console(`downloading icon image for ${instance.url}`)
 					const res = await downloadTemp(`${instance.url}`, (new URL(instance.meta.iconUrl, `https://${instance.url}`)).toString(), `./temp/instance-icons/`, true)
 					if (res) instance.icon = true
 					else instance.icon = false
@@ -207,7 +206,7 @@ getInstancesInfos()
 							await base.webp({ quality: 75 })
 								.toFile(`./dist/instance-icons/${instance.url}.webp`)
 						} catch (e) {
-							glog.error(`error while processing icon for ${instance.url}`, e);
+							console.error(`error while processing icon for ${instance.url}`, e);
 							instance.icon = false
 						}
 					}
@@ -227,7 +226,7 @@ getInstancesInfos()
 
 		fs.writeFile('./dist/instances.json', JSON.stringify(INSTANCES_JSON), () => { })
 
-		glog('FINISHED!')
+		console('FINISHED!')
 		return INSTANCES_JSON;
 	})
 

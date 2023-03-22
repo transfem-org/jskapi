@@ -1,4 +1,3 @@
-import glog from 'fancy-log'
 import semver from 'semver'
 import AbortController from 'abort-controller'
 import extend from 'extend'
@@ -20,21 +19,21 @@ function safeFetch(method, url, options)/*: Promise<Response | null | false | un
 		30000
 	)
 	const start = performance.now();
-	// glog("POST start", url)
+	// console("POST start", url)
 	return fetch(url, extend(true, options, { method, signal: controller.signal })).then(
 		res => {
 			if (res?.ok) {
 				const end = performance.now();
 				if (end - start > 1000) {
-					glog.warn("POST slow", url, (end - start) / 1000)
+					console.warn("POST slow", url, (end - start) / 1000)
 				}
 				return res;
 			}
-			glog("POST finish", url, res.status, res.ok)
+			console("POST finish", url, res.status, res.ok)
 			if (res.status >= 500 && res.status < 600) return null;
 		},
 		async e => {
-			glog("POST failed...", url, e.errno, e.type)
+			console("POST failed...", url, e.errno, e.type)
 			if (e.errno?.toLowerCase().includes('timeout') || e.type === 'aborted') return null;
 			return false;
 		}
@@ -56,7 +55,7 @@ async function fetchJson(method, url, json) {
 	let retryCount = 0;
 
 	while (retryCount < 2) {
-		if (retryCount > 0) glog('retry', url, retryCount);
+		if (retryCount > 0) console('retry', url, retryCount);
 		await new Promise(resolve => retryCount > 0 ? setTimeout(resolve, 20000) : resolve());
 		const res = await safeFetch(method, url, option)
 			.then(res => {
@@ -65,7 +64,7 @@ async function fetchJson(method, url, json) {
 				return res.json();
 			})
 			.catch(e => {
-				glog.error(url, e)
+				console.error(url, e)
 				return false
 			});
 
@@ -94,19 +93,19 @@ async function getNodeinfo(base)/*: Promise<Response | null | false | undefined>
 		signal: controller.signal
 	}).then(res => {
 		if (res?.ok) {
-			glog("Get WellKnown Nodeinfo finish", wellnownUrl, res.status, res.ok)
+			console("Get WellKnown Nodeinfo finish", wellnownUrl, res.status, res.ok)
 			return res.json();
 		}
 		return;
 	}).catch(async e => {
-		glog("Get WellKnown Nodeinfo failed...", wellnownUrl, e.errno, e.type)
+		console("Get WellKnown Nodeinfo failed...", wellnownUrl, e.errno, e.type)
 		return;
 	}).finally(() => {
 		clearTimeout(timeout);
 	});
 
 	if (wellknown.links == null || !Array.isArray(wellknown.links)) {
-		glog("WellKnown Nodeinfo was Not Array", wellnownUrl, wellknown);
+		console("WellKnown Nodeinfo was Not Array", wellnownUrl, wellknown);
 		return null;
 	}
 
@@ -118,7 +117,7 @@ async function getNodeinfo(base)/*: Promise<Response | null | false | undefined>
 	const link = lnik2_1 ?? lnik2_0 ?? lnik1_0;
 
 	if (link == null || typeof link !== 'object') {
-		glog("Nodeinfo Link was Null", wellnownUrl);
+		console("Nodeinfo Link was Null", wellnownUrl);
 		return null;
 	}
 
@@ -137,12 +136,12 @@ async function getNodeinfo(base)/*: Promise<Response | null | false | undefined>
 		signal: controller2.signal
 	}).then(res => {
 		if (res?.ok) {
-			glog("Get Nodeinfo finish", link.href, res.status, res.ok)
+			console("Get Nodeinfo finish", link.href, res.status, res.ok)
 			return res.json();
 		}
 		return;
 	}).catch(async e => {
-		glog("Get Nodeinfo failed...", link.href, e.errno, e.type)
+		console("Get Nodeinfo failed...", link.href, e.errno, e.type)
 		if (e.errno?.toLowerCase().includes('timeout') || e.type === 'aborted') return null;
 		return;
 	}).finally(() => {
@@ -208,7 +207,7 @@ function hasVulnerability(repo, version) {
 }
 
 async function getVersions() {
-	glog("Getting Misskey Versions")
+	console("Getting Misskey Versions")
 	const maxRegExp = /<https:\/\/.*?>; rel="next", <https:\/\/.*?\?page=(\d+)>; rel="last"/;
 	const versions = new Map();
 	const versionOutput = {};
@@ -216,16 +215,16 @@ async function getVersions() {
 	const vqueue = new Queue(3)
 
 	for (const repo of gtRepos) {
-		glog(repo, "Start")
+		console(repo, "Start")
 		const repoSplit = repo.split('/');
 		const res = await fetch(`https://${repoSplit[0]}/api/v1/repos/${repoSplit[1]}/${repoSplit[2]}/tags`, { "User-Agent": ua, }).catch(() => null);
 		if (!res || !res.ok) {
-			glog.error(`Failed to get tags from ${repo} (response is not ok)`);
+			console.error(`Failed to get tags from ${repo} (response is not ok)`);
 			continue;
 		};
 		const json = await res.json();
 		if (!Array.isArray(json)) {
-			glog.error(`Failed to get tags from ${repo} (body is not array)`);
+			console.error(`Failed to get tags from ${repo} (body is not array)`);
 			continue;
 		}
 		const gtVersions = json.slice(0, 40);
@@ -238,7 +237,7 @@ async function getVersions() {
 			});
 		}
 		versionOutput[repo] = gtVersions.map(tag => tag.name);
-		glog(repo, "Finish", json.length);
+		console(repo, "Finish", json.length);
 	}
 
 	const ghHeaders = {
@@ -247,18 +246,18 @@ async function getVersions() {
 	};
 
 	for (const repo of ghRepos) {
-		glog("GitHub", repo, "Start")
+		console("GitHub", repo, "Start")
 		const res1 = await fetch(`https://api.github.com/repos/${repo}/releases`, { headers: ghHeaders })
 		const link = res1.headers.get("link")
 		const max = link && Math.min(Number(maxRegExp.exec(link)[1]), repo === "misskey-dev/misskey" ? 99999 : 4)
 	}
 
-	glog("Got Misskey Versions")
+	console("Got Misskey Versions")
 	return { versions, versionOutput }
 }
 
 export const getInstancesInfos = async function () {
-	glog("Getting Instances' Infos")
+	console("Getting Instances' Infos")
 
 	const promises = [];
 	const alives = [];
@@ -349,14 +348,14 @@ export const getInstancesInfos = async function () {
 	}
 
 	const interval = setInterval(() => {
-		glog(`${pqueue.getQueueLength()} requests remain and ${pqueue.getPendingLength()} requests processing.`)
+		console(`${pqueue.getQueueLength()} requests remain and ${pqueue.getPendingLength()} requests processing.`)
 	}, 1000)
 
 	await Promise.all(promises);
 
 	clearInterval(interval)
 
-	glog("Got Instances' Infos")
+	console("Got Instances' Infos")
 
 	return {
 		alives: alives.sort((a, b) => (b.value || 0) - (a.value || 0)),
