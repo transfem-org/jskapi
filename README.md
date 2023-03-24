@@ -6,7 +6,7 @@ https://api.calckey.org/instances.json
 
 ## Endpoints
 
-Served statically by `npx serve dist/`
+Served statically by [sabo-tabby](https://sabo-tabby.queer.software/)
 
 ### /instances.json
 
