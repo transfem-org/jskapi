@@ -1,242 +1,320 @@
-import * as fs from 'node:fs'
-import * as fsp from 'node:fs/promises'
-import glob from 'glob'
-import sharp from 'sharp'
-import { createHash } from 'node:crypto'
-import mkdirp from 'mkdirp'
-import Queue from 'promise-queue'
-import AbortController from 'abort-controller'
-import fetch from 'node-fetch';
+import * as fs from "node:fs";
+import * as fsp from "node:fs/promises";
+import glob from "glob";
+import sharp from "sharp";
+import { createHash } from "node:crypto";
+import mkdirp from "mkdirp";
+import Queue from "promise-queue";
+import AbortController from "abort-controller";
+import fetch from "node-fetch";
 
-import { getInstancesInfos } from './getInstancesInfos.js'
-import instanceq from './instanceq.js'
+import { getInstancesInfos } from "./getInstancesInfos.js";
+import instanceq from "./instanceq.js";
 
 function getHash(data, a, b, c) {
-	const hashv = createHash(a)
-	hashv.update(Buffer.from(data), b)
-	return hashv.digest(c)
+  const hashv = createHash(a);
+  hashv.update(Buffer.from(data), b);
+  return hashv.digest(c);
 }
 
 async function downloadTemp(name, url, tempDir, alwaysReturn) {
-	const files = glob.sync(`${tempDir}${name}.*`)
+  const files = glob.sync(`${tempDir}${name}.*`);
 
-	function clean() {
-		files.map(file => fs.unlink(file, () => null))
-		return false
-	}
+  function clean() {
+    files.map((file) => fs.unlink(file, () => null));
+    return false;
+  }
 
-	const request = await (async () => {
-		mkdirp.sync(tempDir)
-		const controller = new AbortController()
-		const timeout = setTimeout(
-			() => { controller.abort() },
-			10000
-		)
-		return fetch(url, {
-			encoding: null,
-			signal: controller.signal,
-			headers: {
-				"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:99.0) Gecko/20100101 Firefox/99.0"
-			}
-		}).then(res => {
-			clearTimeout(timeout)
-			return res
-		}, () => {
-			clearTimeout(timeout)
-			return false
-		})
-	})();
+  const request = await (async () => {
+    mkdirp.sync(tempDir);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      controller.abort();
+    }, 10000);
+    return fetch(url, {
+      encoding: null,
+      signal: controller.signal,
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:99.0) Gecko/20100101 Firefox/99.0",
+      },
+    }).then(
+      (res) => {
+        clearTimeout(timeout);
+        return res;
+      },
+      () => {
+        clearTimeout(timeout);
+        return false;
+      }
+    );
+  })();
 
-	if (typeof request !== 'object') {
-		console.error(url, 'request fail!')
-		return clean()
-	}
-	if (!request.ok) {
-		console.error(url, 'request ng!')
-		return clean()
-	}
-	const data = await Promise.race([
-		request.arrayBuffer(),
-		new Promise(resolve => setTimeout(() => resolve(false), 10000))
-	])
-	if (!data) {
-		console.error(url, 'arrayBuffer is null or timeout!')
-		return clean()
-	}
+  if (typeof request !== "object") {
+    console.error(url, "request fail!");
+    return clean();
+  }
+  if (!request.ok) {
+    console.error(url, "request ng!");
+    return clean();
+  }
+  const data = await Promise.race([
+    request.arrayBuffer(),
+    new Promise((resolve) => setTimeout(() => resolve(false), 10000)),
+  ]);
+  if (!data) {
+    console.error(url, "arrayBuffer is null or timeout!");
+    return clean();
+  }
 
-	function safeWriteFile(name, ab, status) {
-		const controller = new AbortController()
-		const timeout = setTimeout(
-			() => { controller.abort() },
-			30000
-		)
-		return fsp.writeFile(`${tempDir}${name}`, Buffer.from(ab), { signal: controller.signal })
-			.then(() => {
-				clearTimeout(timeout)
-				return { name, status }
-			})
-			.catch(e => {
-				console.error('writeFile error', name, e)
-				return false
-			})
-	}
+  function safeWriteFile(name, ab, status) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      controller.abort();
+    }, 30000);
+    return fsp
+      .writeFile(`${tempDir}${name}`, Buffer.from(ab), {
+        signal: controller.signal,
+      })
+      .then(() => {
+        clearTimeout(timeout);
+        return { name, status };
+      })
+      .catch((e) => {
+        console.error("writeFile error", name, e);
+        return false;
+      });
+  }
 
-	if (files.length > 0) {
-		const local = await fsp.readFile(`${tempDir}${name}`).catch(() => false)
-		if (!local) return false
-		if (getHash(data, "sha384", "binary", "base64") !== getHash(local, "sha384", "binary", "base64")) {
-			return safeWriteFile(name, data, "renewed")
-		}
-		if (alwaysReturn) return { name, status: "unchanged" }
-		return false
-	}
-	
-	return safeWriteFile(name, data, "created")
+  if (files.length > 0) {
+    const local = await fsp.readFile(`${tempDir}${name}`).catch(() => false);
+    if (!local) return false;
+    if (
+      getHash(data, "sha384", "binary", "base64") !==
+      getHash(local, "sha384", "binary", "base64")
+    ) {
+      return safeWriteFile(name, data, "renewed");
+    }
+    if (alwaysReturn) return { name, status: "unchanged" };
+    return false;
+  }
+
+  return safeWriteFile(name, data, "created");
 }
 
 getInstancesInfos()
-	.then(async ({alives, deads, outdated, versions, versionOutput}) => {
-		fs.writeFile('./dist/versions.json', JSON.stringify(versionOutput), () => { })
+  .then(async ({ alives, deads, outdated, versions, versionOutput }) => {
+    fs.writeFile(
+      "./dist/versions.json",
+      JSON.stringify(versionOutput),
+      () => {}
+    );
 
-		const stats = alives.reduce((prev, v) => (v.nodeinfo.usage && v.nodeinfo.usage.users) ? {
-			  notesCount: (v.nodeinfo.usage.localPosts || 0) + prev.notesCount,
-			  usersCount: (v.nodeinfo.usage.users.total || 0) + prev.usersCount,
-			  mau: (v.nodeinfo.usage.users.activeMonth || 0) + prev.mau,
-			  instancesCount: 1 + prev.instancesCount
-		  } : { ...prev }, { notesCount: 0, usersCount: 0, mau: 0, instancesCount: 0 })
+    const stats = alives.reduce(
+      (prev, v) =>
+        v.nodeinfo.usage && v.nodeinfo.usage.users
+          ? {
+              notesCount: (v.nodeinfo.usage.localPosts || 0) + prev.notesCount,
+              usersCount: (v.nodeinfo.usage.users.total || 0) + prev.usersCount,
+              mau: (v.nodeinfo.usage.users.activeMonth || 0) + prev.mau,
+              instancesCount: 1 + prev.instancesCount,
+            }
+          : { ...prev },
+      { notesCount: 0, usersCount: 0, mau: 0, instancesCount: 0 }
+    );
 
-		fs.writeFile('./dist/alives.txt', alives.map(v => v.url).join('\n'), () => { })
-		fs.writeFile('./dist/deads.txt', deads.map(v => v.url).join('\n'), () => { })
-		fs.writeFile('./dist/outdated.txt', outdated.map(v => v.url).join('\n'), () => { })
+    fs.writeFile(
+      "./dist/alives.txt",
+      alives.map((v) => v.url).join("\n"),
+      () => {}
+    );
+    fs.writeFile(
+      "./dist/deads.txt",
+      deads.map((v) => v.url).join("\n"),
+      () => {}
+    );
+    fs.writeFile(
+      "./dist/outdated.txt",
+      outdated.map((v) => v.url).join("\n"),
+      () => {}
+    );
 
-		await mkdirp('./dist/instance-banners')
-		await mkdirp('./dist/instance-backgrounds')
-		await mkdirp('./dist/instance-icons')
+    await mkdirp("./dist/instance-banners");
+    await mkdirp("./dist/instance-backgrounds");
+    await mkdirp("./dist/instance-icons");
 
-		const infoQueue = new Queue(3)
-		const instancesInfosPromises = [];
+    const infoQueue = new Queue(3);
+    const instancesInfosPromises = [];
 
-		for (const instance of alives) {
-			if (instance.meta.bannerUrl) {
-				instancesInfosPromises.push(infoQueue.add(async () => {
-					console.log(`downloading banner for ${instance.url}`)
-					const res = await downloadTemp(`${instance.url}`, (new URL(instance.meta.bannerUrl, `https://${instance.url}`)).toString(), `./temp/instance-banners/`, true)
-					if (res) instance.banner = true
-					else instance.banner = false
+    for (const instance of alives) {
+      if (instance.meta.bannerUrl) {
+        instancesInfosPromises.push(
+          infoQueue.add(async () => {
+            console.log(`downloading banner for ${instance.url}`);
+            const res = await downloadTemp(
+              `${instance.url}`,
+              new URL(
+                instance.meta.bannerUrl,
+                `https://${instance.url}`
+              ).toString(),
+              `./temp/instance-banners/`,
+              true
+            );
+            if (res) instance.banner = true;
+            else instance.banner = false;
 
-					if (res && res.status !== "unchanged") {
-						const base = sharp(`./temp/instance-banners/${res.name}`)
-							.resize({
-								width: 1024,
-								withoutEnlargement: true,
-							})
-						if (!base) {
-							instance.banner = false
-							return;
-						}
-						try {
-							await base.jpeg({ quality: 80, progressive: true })
-								.toFile(`./dist/instance-banners/${instance.url}.jpeg`)
-							await base.webp({ quality: 75 })
-								.toFile(`./dist/instance-banners/${instance.url}.webp`)
-						} catch (e) {
-							console.error(`error while processing banner for ${instance.url}`, e);
-							instance.banner = false
-						}
-					}
-				}))
-			} else {
-				instance.banner = false
-			}
+            if (res && res.status !== "unchanged") {
+              const base = sharp(`./temp/instance-banners/${res.name}`).resize({
+                width: 1024,
+                withoutEnlargement: true,
+              });
+              if (!base) {
+                instance.banner = false;
+                return;
+              }
+              try {
+                await base
+                  .jpeg({ quality: 80, progressive: true })
+                  .toFile(`./dist/instance-banners/${instance.url}.jpeg`);
+                await base
+                  .webp({ quality: 75 })
+                  .toFile(`./dist/instance-banners/${instance.url}.webp`);
+              } catch (e) {
+                console.error(
+                  `error while processing banner for ${instance.url}`,
+                  e
+                );
+                instance.banner = false;
+              }
+            }
+          })
+        );
+      } else {
+        instance.banner = false;
+      }
 
-			if (instance.meta.backgroundImageUrl) {
-				instancesInfosPromises.push(infoQueue.add(async () => {
-					console.log(`downloading background image for ${instance.url}`)
-					const res = await downloadTemp(`${instance.url}`, (new URL(instance.meta.backgroundImageUrl, `https://${instance.url}`)).toString(), `./temp/instance-backgrounds/`, true)
-					if (res) instance.background = true
-					else instance.background = false
-					if (res && res.status !== "unchanged") {
-						const base = sharp(`./temp/instance-backgrounds/${res.name}`)
-							.resize({
-								width: 1024,
-								withoutEnlargement: true,
-							})
+      if (instance.meta.backgroundImageUrl) {
+        instancesInfosPromises.push(
+          infoQueue.add(async () => {
+            console.log(`downloading background image for ${instance.url}`);
+            const res = await downloadTemp(
+              `${instance.url}`,
+              new URL(
+                instance.meta.backgroundImageUrl,
+                `https://${instance.url}`
+              ).toString(),
+              `./temp/instance-backgrounds/`,
+              true
+            );
+            if (res) instance.background = true;
+            else instance.background = false;
+            if (res && res.status !== "unchanged") {
+              const base = sharp(
+                `./temp/instance-backgrounds/${res.name}`
+              ).resize({
+                width: 1024,
+                withoutEnlargement: true,
+              });
 
-						if (!base) {
-							instance.background = false
-							return;
-						}
+              if (!base) {
+                instance.background = false;
+                return;
+              }
 
-						try {
-							await base.jpeg({ quality: 80, progressive: true })
-								.toFile(`./dist/instance-backgrounds/${instance.url}.jpeg`)
-							await base.webp({ quality: 75 })
-								.toFile(`./dist/instance-backgrounds/${instance.url}.webp`)
-						} catch (e) {
-							console.error(`error while processing background for ${instance.url}`, e);
-							instance.background = false
-						}
-					}
-				}))
-			} else {
-				instance.background = false
-			}
+              try {
+                await base
+                  .jpeg({ quality: 80, progressive: true })
+                  .toFile(`./dist/instance-backgrounds/${instance.url}.jpeg`);
+                await base
+                  .webp({ quality: 75 })
+                  .toFile(`./dist/instance-backgrounds/${instance.url}.webp`);
+              } catch (e) {
+                console.error(
+                  `error while processing background for ${instance.url}`,
+                  e
+                );
+                instance.background = false;
+              }
+            }
+          })
+        );
+      } else {
+        instance.background = false;
+      }
 
-			if (instance.meta.iconUrl) {
-				instancesInfosPromises.push(infoQueue.add(async () => {
-					console.log(`downloading icon image for ${instance.url}`)
-					const res = await downloadTemp(`${instance.url}`, (new URL(instance.meta.iconUrl, `https://${instance.url}`)).toString(), `./temp/instance-icons/`, true)
-					if (res) instance.icon = true
-					else instance.icon = false
-					if (res && res.status !== "unchanged") {
-						const base = sharp(`./temp/instance-icons/${res.name}`)
-							.resize({
-								height: 200,
-								withoutEnlargement: true,
-							})
+      if (instance.meta.iconUrl) {
+        instancesInfosPromises.push(
+          infoQueue.add(async () => {
+            console.log(`downloading icon image for ${instance.url}`);
+            const res = await downloadTemp(
+              `${instance.url}`,
+              new URL(
+                instance.meta.iconUrl,
+                `https://${instance.url}`
+              ).toString(),
+              `./temp/instance-icons/`,
+              true
+            );
+            if (res) instance.icon = true;
+            else instance.icon = false;
+            if (res && res.status !== "unchanged") {
+              const base = sharp(`./temp/instance-icons/${res.name}`).resize({
+                height: 200,
+                withoutEnlargement: true,
+              });
 
-						if (!base) {
-							instance.icon = false
-							return;
-						}
+              if (!base) {
+                instance.icon = false;
+                return;
+              }
 
-						try {
-							await base.png()
-								.toFile(`./dist/instance-icons/${instance.url}.png`)
-							await base.webp({ quality: 75 })
-								.toFile(`./dist/instance-icons/${instance.url}.webp`)
-						} catch (e) {
-							console.error(`error while processing icon for ${instance.url}`, e);
-							instance.icon = false
-						}
-					}
-				}))
-			} else {
-				instance.icon = false
-			}
-		}
+              try {
+                await base
+                  .png()
+                  .toFile(`./dist/instance-icons/${instance.url}.png`);
+                await base
+                  .webp({ quality: 75 })
+                  .toFile(`./dist/instance-icons/${instance.url}.webp`);
+              } catch (e) {
+                console.error(
+                  `error while processing icon for ${instance.url}`,
+                  e
+                );
+                instance.icon = false;
+              }
+            }
+          })
+        );
+      } else {
+        instance.icon = false;
+      }
+    }
 
-		await Promise.allSettled(instancesInfosPromises)
+    await Promise.allSettled(instancesInfosPromises);
 
-		const INSTANCES_JSON = {
-			date: new Date(),
-			stats,
-			instancesInfos: alives
-		}
+    const INSTANCES_JSON = {
+      date: new Date(),
+      stats,
+      instancesInfos: alives,
+    };
 
-		fs.writeFile('./dist/instances.json', JSON.stringify(INSTANCES_JSON), () => { })
+    fs.writeFile(
+      "./dist/instances.json",
+      JSON.stringify(INSTANCES_JSON),
+      () => {}
+    );
 
-		console.log('FINISHED!')
-		return INSTANCES_JSON;
-	})
+    console.log("FINISHED!");
+    return INSTANCES_JSON;
+  })
 
-	.then(async INSTANCES_JSON => {
-		// 0. Statistics
-		let tree = await fetch("https://calckey.social/api/notes/create", {
-			method: "POST",
-			body: JSON.stringify({
-				i: process.env.MK_TOKEN,
-				text: `I've pinged all visible Calckey servers ${INSTANCES_JSON.date.toISOString()}.
+  .then(async (INSTANCES_JSON) => {
+    // 0. Statistics
+    let tree = await fetch("https://calckey.social/api/notes/create", {
+      method: "POST",
+      body: JSON.stringify({
+        i: process.env.MK_TOKEN,
+        text: `I've pinged all visible Calckey servers ${INSTANCES_JSON.date.toISOString()}.
 
 Total Notes: ${INSTANCES_JSON.stats.notesCount}
 Total Users: ${INSTANCES_JSON.stats.usersCount}
@@ -244,59 +322,65 @@ Total MAU: ${INSTANCES_JSON.stats.mau}
 Total Servers: ${INSTANCES_JSON.stats.instancesCount}
 
 https://calckey.org/`,
-			}),
-			headers: {
-				"Content-Type": "application/json"
-			}
-		}).then(res => res.json());
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }).then((res) => res.json());
 
-		// Instances
-		const sorted = INSTANCES_JSON.instancesInfos.sort((a, b) => (b.value - a.value));
+    // Instances
+    const sorted = INSTANCES_JSON.instancesInfos.sort(
+      (a, b) => b.value - a.value
+    );
 
-		const getInstancesList = instances => instances.map(
-			(instance, i) =>
-				`${i + 1}. ?[${
-					(instance.name || instance.name !== instance.url) ?
-						`<plain>${instance.name}</plain> (${instance.url})` :
-						instance.url
-				}](https://${instance.url})`
-		).join('\n')
+    const getInstancesList = (instances) =>
+      instances
+        .map(
+          (instance, i) =>
+            `${i + 1}. ?[${
+              instance.name || instance.name !== instance.url
+                ? `<plain>${instance.name}</plain> (${instance.url})`
+                : instance.url
+            }](https://${instance.url})`
+        )
+        .join("\n");
 
-		// 1. Japanese
-		const japaneseInstances = [];
+    // 1. Japanese
+    const japaneseInstances = [];
 
-		for (const instance of sorted) {
-			japaneseInstances.push(instance);
-			if (japaneseInstances.length === 30) break;
-		}
+    for (const instance of sorted) {
+      japaneseInstances.push(instance);
+      if (japaneseInstances.length === 30) break;
+    }
 
-		tree = await fetch("https://calckey.social/api/notes/create", {
-			method: "POST",
-			body: JSON.stringify({
-				i: process.env.MK_TOKEN,
-				text: `Top 30 instances:\n${getInstancesList(japaneseInstances)}`,
-				replyId: tree.createdNote.id,
-			}),
-			headers: {
-				"Content-Type": "application/json"
-			}
-		}).then(res => res.json());
+    tree = await fetch("https://calckey.social/api/notes/create", {
+      method: "POST",
+      body: JSON.stringify({
+        i: process.env.MK_TOKEN,
+        text: `Top 30 instances:\n${getInstancesList(japaneseInstances)}`,
+        replyId: tree.createdNote.id,
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }).then((res) => res.json());
+  })
 
-	})
+  .then(async () => {
+    const notIncluded = await instanceq();
+    if (notIncluded.length === 0) return;
+    console.log(notIncluded);
 
-	.then(async () => {
-		const notIncluded = await instanceq()
-		if (notIncluded.length === 0) return;
-		console.log(notIncluded)
-
-		return fetch("https://calckey.social/api/notes/create", {
-			method: "POST",
-			body: JSON.stringify({
-				i: process.env.MK_TOKEN,
-				text: `New instances found!\n${notIncluded.join('\n').replace("\n", "\n -")}`
-			}),
-			headers: {
-				"Content-Type": "application/json"
-			}
-		})
-	})
+    return fetch("https://calckey.social/api/notes/create", {
+      method: "POST",
+      body: JSON.stringify({
+        i: process.env.MK_TOKEN,
+        text: `New instances found!\n${notIncluded
+          .join("\n")
+          .replace("\n", "\n -")}`,
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  });
