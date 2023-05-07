@@ -3,6 +3,10 @@ joinmisskey servers' information api forked for Calckey
 
 https://api.calckey.org/instances.json
 
+## Running locally
+
+1. `pnpm i`
+2. `bun index.js` or `node index.js`
 
 ## Endpoints
 
