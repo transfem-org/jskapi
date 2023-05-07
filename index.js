@@ -147,146 +147,151 @@ getInstancesInfos()
     const instancesInfosPromises = [];
 
     for (const instance of alives) {
-      if (instance.meta.bannerUrl) {
-        instancesInfosPromises.push(
-          infoQueue.add(async () => {
-            console.log(`downloading banner for ${instance.url}`);
-            const res = await downloadTemp(
-              `${instance.url}`,
-              new URL(
-                instance.meta.bannerUrl,
-                `https://${instance.url}`
-              ).toString(),
-              `./temp/instance-banners/`,
-              true
-            );
-            if (res) instance.banner = true;
-            else instance.banner = false;
+      try {
+        if (instance.meta.bannerUrl) {
+          instancesInfosPromises.push(
+            infoQueue.add(async () => {
+              console.log(`downloading banner for ${instance.url}`);
+              const res = await downloadTemp(
+                `${instance.url}`,
+                new URL(
+                  instance.meta.bannerUrl,
+                  `https://${instance.url}`
+                ).toString(),
+                `./temp/instance-banners/`,
+                true
+              );
+              if (res) instance.banner = true;
+              else instance.banner = false;
+  
+              if (res && res.status !== "unchanged") {
+                const base = sharp(`./temp/instance-banners/${res.name}`).resize({
+                  width: 1024,
+                  withoutEnlargement: true,
+                });
+                if (!base) {
+                  instance.banner = false;
+                  return;
+                }
+                try {
+                  await base
+                    .jpeg({ quality: 80, progressive: true })
+                    .toFile(`./dist/instance-banners/${instance.url}.jpeg`);
+                  await base
+                    .webp({ quality: 75 })
+                    .toFile(`./dist/instance-banners/${instance.url}.webp`);
+                } catch (e) {
+                  console.error(
+                    `error while processing banner for ${instance.url}`,
+                    e
+                  );
+                  instance.banner = false;
+                }
+              }
+            })
+          );
+        } else {
+          instance.banner = false;
+        }
 
-            if (res && res.status !== "unchanged") {
-              const base = sharp(`./temp/instance-banners/${res.name}`).resize({
-                width: 1024,
-                withoutEnlargement: true,
-              });
-              if (!base) {
-                instance.banner = false;
-                return;
+        if (instance.meta.backgroundImageUrl) {
+          instancesInfosPromises.push(
+            infoQueue.add(async () => {
+              console.log(`downloading background image for ${instance.url}`);
+              const res = await downloadTemp(
+                `${instance.url}`,
+                new URL(
+                  instance.meta.backgroundImageUrl,
+                  `https://${instance.url}`
+                ).toString(),
+                `./temp/instance-backgrounds/`,
+                true
+              );
+              if (res) instance.background = true;
+              else instance.background = false;
+              if (res && res.status !== "unchanged") {
+                const base = sharp(
+                  `./temp/instance-backgrounds/${res.name}`
+                ).resize({
+                  width: 1024,
+                  withoutEnlargement: true,
+                });
+  
+                if (!base) {
+                  instance.background = false;
+                  return;
+                }
+  
+                try {
+                  await base
+                    .jpeg({ quality: 80, progressive: true })
+                    .toFile(`./dist/instance-backgrounds/${instance.url}.jpeg`);
+                  await base
+                    .webp({ quality: 75 })
+                    .toFile(`./dist/instance-backgrounds/${instance.url}.webp`);
+                } catch (e) {
+                  console.error(
+                    `error while processing background for ${instance.url}`,
+                    e
+                  );
+                  instance.background = false;
+                }
               }
-              try {
-                await base
-                  .jpeg({ quality: 80, progressive: true })
-                  .toFile(`./dist/instance-banners/${instance.url}.jpeg`);
-                await base
-                  .webp({ quality: 75 })
-                  .toFile(`./dist/instance-banners/${instance.url}.webp`);
-              } catch (e) {
-                console.error(
-                  `error while processing banner for ${instance.url}`,
-                  e
-                );
-                instance.banner = false;
+            })
+          );
+        } else {
+          instance.background = false;
+        }
+
+        if (instance.meta.iconUrl) {
+          instancesInfosPromises.push(
+            infoQueue.add(async () => {
+              console.log(`downloading icon image for ${instance.url}`);
+              const res = await downloadTemp(
+                `${instance.url}`,
+                new URL(
+                  instance.meta.iconUrl,
+                  `https://${instance.url}`
+                ).toString(),
+                `./temp/instance-icons/`,
+                true
+              );
+              if (res) instance.icon = true;
+              else instance.icon = false;
+              if (res && res.status !== "unchanged") {
+                const base = sharp(`./temp/instance-icons/${res.name}`).resize({
+                  height: 200,
+                  withoutEnlargement: true,
+                });
+  
+                if (!base) {
+                  instance.icon = false;
+                  return;
+                }
+  
+                try {
+                  await base
+                    .png()
+                    .toFile(`./dist/instance-icons/${instance.url}.png`);
+                  await base
+                    .webp({ quality: 75 })
+                    .toFile(`./dist/instance-icons/${instance.url}.webp`);
+                } catch (e) {
+                  console.error(
+                    `error while processing icon for ${instance.url}`,
+                    e
+                  );
+                  instance.icon = false;
+                }
               }
-            }
-          })
-        );
-      } else {
-        instance.banner = false;
+            })
+          );
+        } else {
+          instance.icon = false;
+        }
       }
-
-      if (instance.meta.backgroundImageUrl) {
-        instancesInfosPromises.push(
-          infoQueue.add(async () => {
-            console.log(`downloading background image for ${instance.url}`);
-            const res = await downloadTemp(
-              `${instance.url}`,
-              new URL(
-                instance.meta.backgroundImageUrl,
-                `https://${instance.url}`
-              ).toString(),
-              `./temp/instance-backgrounds/`,
-              true
-            );
-            if (res) instance.background = true;
-            else instance.background = false;
-            if (res && res.status !== "unchanged") {
-              const base = sharp(
-                `./temp/instance-backgrounds/${res.name}`
-              ).resize({
-                width: 1024,
-                withoutEnlargement: true,
-              });
-
-              if (!base) {
-                instance.background = false;
-                return;
-              }
-
-              try {
-                await base
-                  .jpeg({ quality: 80, progressive: true })
-                  .toFile(`./dist/instance-backgrounds/${instance.url}.jpeg`);
-                await base
-                  .webp({ quality: 75 })
-                  .toFile(`./dist/instance-backgrounds/${instance.url}.webp`);
-              } catch (e) {
-                console.error(
-                  `error while processing background for ${instance.url}`,
-                  e
-                );
-                instance.background = false;
-              }
-            }
-          })
-        );
-      } else {
-        instance.background = false;
-      }
-
-      if (instance.meta.iconUrl) {
-        instancesInfosPromises.push(
-          infoQueue.add(async () => {
-            console.log(`downloading icon image for ${instance.url}`);
-            const res = await downloadTemp(
-              `${instance.url}`,
-              new URL(
-                instance.meta.iconUrl,
-                `https://${instance.url}`
-              ).toString(),
-              `./temp/instance-icons/`,
-              true
-            );
-            if (res) instance.icon = true;
-            else instance.icon = false;
-            if (res && res.status !== "unchanged") {
-              const base = sharp(`./temp/instance-icons/${res.name}`).resize({
-                height: 200,
-                withoutEnlargement: true,
-              });
-
-              if (!base) {
-                instance.icon = false;
-                return;
-              }
-
-              try {
-                await base
-                  .png()
-                  .toFile(`./dist/instance-icons/${instance.url}.png`);
-                await base
-                  .webp({ quality: 75 })
-                  .toFile(`./dist/instance-icons/${instance.url}.webp`);
-              } catch (e) {
-                console.error(
-                  `error while processing icon for ${instance.url}`,
-                  e
-                );
-                instance.icon = false;
-              }
-            }
-          })
-        );
-      } else {
-        instance.icon = false;
+      catch (e) {
+        console.error(`error while processing instance ${instance.url}`, e);
       }
     }
 
