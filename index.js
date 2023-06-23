@@ -7,9 +7,7 @@ import mkdirp from "mkdirp";
 import Queue from "promise-queue";
 import AbortController from "abort-controller";
 import fetch from "node-fetch";
-
 import { getInstancesInfos } from "./getInstancesInfos.js";
-import instanceq from "./instanceq.js";
 
 function getHash(data, a, b, c) {
   const hashv = createHash(a);
@@ -36,7 +34,7 @@ async function downloadTemp(name, url, tempDir, alwaysReturn) {
       signal: controller.signal,
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:99.0) Gecko/20100101 Firefox/99.0",
+          "CalckeyOrg/0.1.0; +https://calckey.org/join",
       },
     }).then(
       (res) => {
@@ -103,12 +101,7 @@ async function downloadTemp(name, url, tempDir, alwaysReturn) {
 }
 
 getInstancesInfos()
-  .then(async ({ alives, deads, outdated, versions, versionOutput }) => {
-    fs.writeFile(
-      "./dist/versions.json",
-      JSON.stringify(versionOutput),
-      () => {}
-    );
+  .then(async ({ alives, deads }) => {
 
     const stats = alives.reduce(
       (prev, v) =>
@@ -133,17 +126,12 @@ getInstancesInfos()
       deads.map((v) => v.url).join("\n"),
       () => {}
     );
-    fs.writeFile(
-      "./dist/outdated.txt",
-      outdated.map((v) => v.url).join("\n"),
-      () => {}
-    );
 
     await mkdirp("./dist/instance-banners");
     await mkdirp("./dist/instance-backgrounds");
     await mkdirp("./dist/instance-icons");
 
-    const infoQueue = new Queue(3);
+    const infoQueue = new Queue(128);
     const instancesInfosPromises = [];
 
     for (const instance of alives) {
@@ -151,7 +139,7 @@ getInstancesInfos()
         if (instance.meta.bannerUrl) {
           instancesInfosPromises.push(
             infoQueue.add(async () => {
-              console.log(`downloading banner for ${instance.url}`);
+              console.log(`downloading banner for ${instance.url}: ${instance.meta.bannerUrl}`);
               const res = await downloadTemp(
                 `${instance.url}`,
                 new URL(
@@ -163,6 +151,7 @@ getInstancesInfos()
               );
               if (res) instance.banner = true;
               else instance.banner = false;
+              console.log(res);
   
               if (res && res.status !== "unchanged") {
                 const base = sharp(`./temp/instance-banners/${res.name}`).resize({
@@ -311,81 +300,4 @@ getInstancesInfos()
 
     console.log("FINISHED!");
     return INSTANCES_JSON;
-  })
-
-  .then(async (INSTANCES_JSON) => {
-    // 0. Statistics
-    let tree = await fetch("https://calckey.social/api/notes/create", {
-      method: "POST",
-      body: JSON.stringify({
-        i: process.env.MK_TOKEN,
-        text: `I've pinged all visible Calckey servers ${INSTANCES_JSON.date.toISOString()}.
-
-Total Notes: ${INSTANCES_JSON.stats.notesCount}
-Total Users: ${INSTANCES_JSON.stats.usersCount}
-Total MAU: ${INSTANCES_JSON.stats.mau}
-Total Servers: ${INSTANCES_JSON.stats.instancesCount}
-
-https://calckey.org/`,
-      }),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }).then((res) => res.json());
-
-    // Instances
-    const sorted = INSTANCES_JSON.instancesInfos.sort(
-      (a, b) => b.value - a.value
-    );
-
-    const getInstancesList = (instances) =>
-      instances
-        .map(
-          (instance, i) =>
-            `${i + 1}. ?[${
-              instance.name || instance.name !== instance.url
-                ? `<plain>${instance.name}</plain> (${instance.url})`
-                : instance.url
-            }](https://${instance.url})`
-        )
-        .join("\n");
-
-    // 1. Japanese
-    const japaneseInstances = [];
-
-    for (const instance of sorted) {
-      japaneseInstances.push(instance);
-      if (japaneseInstances.length === 30) break;
-    }
-
-    tree = await fetch("https://calckey.social/api/notes/create", {
-      method: "POST",
-      body: JSON.stringify({
-        i: process.env.MK_TOKEN,
-        text: `Top 30 instances:\n${getInstancesList(japaneseInstances)}`,
-        replyId: tree.createdNote.id,
-      }),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }).then((res) => res.json());
-  })
-
-  .then(async () => {
-    const notIncluded = await instanceq();
-    if (notIncluded.length === 0) return;
-    console.log(notIncluded);
-
-    return fetch("https://calckey.social/api/notes/create", {
-      method: "POST",
-      body: JSON.stringify({
-        i: process.env.MK_TOKEN,
-        text: `New instances found!\n${notIncluded
-          .join("\n")
-          .replace("\n", "\n -")}`,
-      }),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
   });

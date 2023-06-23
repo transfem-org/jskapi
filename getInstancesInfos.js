@@ -8,7 +8,7 @@ import fetch from "node-fetch";
 
 const instances = loadyaml("./data/instances.yml");
 
-const pqueue = new Queue(32);
+const pqueue = new Queue(128);
 
 const ua =
   "CalckeyOrg/0.1.0; +https://calckey.org/join";
@@ -23,7 +23,6 @@ function safeFetch(
     controller.abort();
   }, 30000);
   const start = performance.now();
-  // console.log("POST start", url)
   return fetch(
     url,
     extend(true, options, { method, signal: controller.signal })
@@ -200,122 +199,12 @@ async function safeGetNodeInfo(base) {
     .catch(() => null);
 }
 
-// misskey-dev/misskeyを最後に持っていくべし
-export const ghRepos = [
-  //"mei23/misskey",
-  //"mei23/misskey-v11",
-  //"kokonect-link/cherrypick",
-  "misskey-dev/misskey",
-];
-
-export const gtRepos = [
-  //"codeberg.org/thatonecalculator/calckey",
-  //"akkoma.dev/FoundKeyGang/FoundKey",
-];
-
-function hasVulnerability(repo, version) {
-  switch (repo) {
-    case "misskey-dev/misskey":
-      return (
-        semver.satisfies(version, "< 12.119.2") ||
-        //semver.satisfies(version, '< 12.90.0') ||
-        //semver.satisfies(version, '< 12.51.0') ||
-        semver.satisfies(
-          version,
-          ">= 10.46.0 < 10.102.4 || >= 11.0.0-alpha.1 < 11.20.2"
-        )
-      );
-    /*
-		case 'mei23/misskey':
-			return (
-				semver.satisfies(version, '< 10.102.608-m544') ||
-				semver.satisfies(version, '< 10.102.338-m544')
-			);
-		case 'mei23/misskey-v11':
-			return (
-				semver.satisfies(version, '< 11.37.1-20221202185541') ||
-				semver.satisfies(version, '< 11.37.1-20210825162615')
-			);
-		case 'FoundKeyGang/FoundKey':
-			return (
-				semver.satisfies(version, '< v13.0.0-preview3')
-			);
-		*/
-    default:
-      return false;
-  }
-}
-
-async function getVersions() {
-  console.log("Getting Misskey Versions");
-  const maxRegExp =
-    /<https:\/\/.*?>; rel="next", <https:\/\/.*?\?page=(\d+)>; rel="last"/;
-  const versions = new Map();
-  const versionOutput = {};
-
-  const vqueue = new Queue(3);
-
-  for (const repo of gtRepos) {
-    console.log(repo, "Start");
-    const repoSplit = repo.split("/");
-    const res = await fetch(
-      `https://${repoSplit[0]}/api/v1/repos/${repoSplit[1]}/${repoSplit[2]}/tags`,
-      { "User-Agent": ua }
-    ).catch(() => null);
-    if (!res || !res.ok) {
-      console.error(`Failed to get tags from ${repo} (response is not ok)`);
-      continue;
-    }
-    const json = await res.json();
-    if (!Array.isArray(json)) {
-      console.error(`Failed to get tags from ${repo} (body is not array)`);
-      continue;
-    }
-    const gtVersions = json.slice(0, 40);
-    for (let i = 0; i < gtVersions.length; i++) {
-      const version = semver.clean(gtVersions[i].name, { loose: true });
-      versions.set(version, {
-        repo: `${repoSplit[1]}/${repoSplit[2]}`,
-        count: i,
-        hasVulnerability: hasVulnerability(repo, version),
-      });
-    }
-    versionOutput[repo] = gtVersions.map((tag) => tag.name);
-    console.log(repo, "Finish", json.length);
-  }
-
-  const ghHeaders = {
-    "User-Agent": ua,
-    Authorization: `bearer ${process.env.LB_TOKEN}`,
-  };
-
-  for (const repo of ghRepos) {
-    console.log("GitHub", repo, "Start");
-    const res1 = await fetch(`https://api.github.com/repos/${repo}/releases`, {
-      headers: ghHeaders,
-    });
-    const link = res1.headers.get("link");
-    const max =
-      link &&
-      Math.min(
-        Number(maxRegExp.exec(link)[1]),
-        repo === "misskey-dev/misskey" ? 99999 : 4
-      );
-  }
-
-  console.log("Got Misskey Versions");
-  return { versions, versionOutput };
-}
-
 export const getInstancesInfos = async function () {
   console.log("Getting Instances' Infos");
 
   const promises = [];
   const alives = [];
   const deads = [];
-  const outdated = [];
-
-  const { versions, versionOutput } = await getVersions();
 
   // eslint-disable-next-line no-restricted-syntax
   for (let t = 0; t < instances.length; t += 1) {
@@ -325,84 +214,31 @@ export const getInstancesInfos = async function () {
         const nodeinfo = (await safeGetNodeInfo(instance.url)) || null;
 
         if (!nodeinfo) {
-          deads.push(extend(true, { isAlive: false, value: 0 }, instance));
-          return;
-        }
-
-        const versionInfo = (() => {
-          const sem1 = semver.clean(nodeinfo.software.version, { loose: true });
-          if (versions.has(sem1)) return { just: true, ...versions.get(sem1) };
-          const sem2 = semver.valid(semver.coerce(nodeinfo.software.version));
-          let current = { repo: "misskey-dev/misskey", count: 1500 };
-          for (const [key, value] of versions.entries()) {
-            if (sem1?.startsWith(key)) {
-              if (value.count === 0) return { just: false, ...value };
-              else if (current.count >= value.count)
-                current = { just: false, ...value };
-            } else if (
-              sem2 &&
-              value.repo == "misskey-dev/misskey" &&
-              sem2.startsWith(key)
-            ) {
-              if (value.count === 0) return { just: false, ...value };
-              else if (current.count >= value.count)
-                current = { just: false, ...value };
-            }
-          }
-          return current;
-        })();
-
-        if (versionInfo.just && versionInfo.hasVulnerability) {
-          outdated.push({
-            nodeinfo,
-            ...instance,
-          });
+          deads.push(extend(true, { isAlive: false }, instance));
           return;
         }
 
         const meta =
           (await fetchJson("POST", `https://${instance.url}/api/meta`)) || null;
-        const stat =
-          (await fetchJson("POST", `https://${instance.url}/api/stats`)) ||
-          null;
+        // const stat =
+        //   (await fetchJson("POST", `https://${instance.url}/api/stats`)) ||
+        //   null;
         const NoteChart =
           (await fetchJson("POST", `https://${instance.url}/api/charts/notes`, {
             span: "day",
             limit: 15,
           })) || null;
 
-        if (nodeinfo && meta && stat && NoteChart) {
+        if (nodeinfo && meta && NoteChart) {
           if (meta) {
             delete meta.emojis;
             delete meta.announcements;
           }
 
-          /*   インスタンスバリューの算出   */
-          let value = 0;
-          // 1. バージョンのリリース順をもとに並び替え
-          value += 100000 - (versionInfo.count - 30) * 7200;
-
-          // (基準値に影響があるかないか程度に色々な値を考慮する)
-          if (NoteChart && Array.isArray(NoteChart.local?.inc)) {
-            // 2.
-            const arr = NoteChart.local?.inc.filter((e) => e !== 0);
-
-            // ノート増加数の15日間の平均 * 1
-            // eslint-disable-next-line no-mixed-operators
-            if (arr.length > 0)
-              value +=
-                arr.reduce((prev, current) => prev + current) / arr.length;
-
-            // もし統計の数が15日に満たない場合、新規インスタンス特典を付与
-            // value += (15 - arr.length) * 360
-          }
-
           alives.push(
             extend(true, instance, {
-              value,
               meta,
               nodeinfo,
-              stats: stat,
               name:
                 instance.name ||
                 nodeinfo.metadata.nodeName ||
@@ -425,11 +261,10 @@ export const getInstancesInfos = async function () {
                 "es",
               ],
               isAlive: true,
-              repo: versionInfo?.repo,
             })
           );
         } else {
-          deads.push(extend(true, { isAlive: false, value: 0 }, instance));
+          deads.push(extend(true, { isAlive: false }, instance));
         }
       })
     );
@@ -448,10 +283,7 @@ export const getInstancesInfos = async function () {
   console.log("Got Instances' Infos");
 
   return {
-    alives: alives.sort((a, b) => (b.value || 0) - (a.value || 0)),
+    alives,
     deads,
-    outdated,
-    versions,
-    versionOutput,
   };
 };

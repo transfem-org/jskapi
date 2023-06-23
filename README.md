@@ -28,9 +28,8 @@ Served statically by [sabo-tabby](https://sabo-tabby.queer.software/)
             url: String,     //  Hostname e.g. misskey.io
             name: String,    //  Name e.g. すしすきー
             langs: String[], //  Language the API author aqz set manually e.g. ["ja"], ["zh"]
-            description: String | Null,  // meta.description or the the API author aqz set manually
+            description: String | Null,  // meta.description
             isAlive: true,   //  must true
-            value: Number,   //  The server Value calculated from the version, etc.
             banner: Bool,    //  Banner existance
             background: Bool,//  Background Image existance
             icon: Bool,      //  Icon Image existance
