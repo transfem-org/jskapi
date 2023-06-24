@@ -220,16 +220,16 @@ export const getInstancesInfos = async function () {
 
         const meta =
           (await fetchJson("POST", `https://${instance.url}/api/meta`)) || null;
-        // const stat =
-        //   (await fetchJson("POST", `https://${instance.url}/api/stats`)) ||
-        //   null;
+        const stat =
+          (await fetchJson("POST", `https://${instance.url}/api/stats`)) ||
+          null;
         const NoteChart =
           (await fetchJson("POST", `https://${instance.url}/api/charts/notes`, {
             span: "day",
             limit: 15,
           })) || null;
 
-        if (nodeinfo && meta && NoteChart) {
+        if (nodeinfo && stat && meta && NoteChart) {
           if (meta) {
             delete meta.emojis;
             delete meta.announcements;
@@ -249,6 +249,7 @@ export const getInstancesInfos = async function () {
                 meta.description ||
                 instance.description ||
                 null,
+              stats: stat,
               langs: instance.langs || [
                 "ja",
                 "en",
