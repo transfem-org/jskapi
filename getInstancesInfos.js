@@ -67,7 +67,7 @@ async function fetchJson(method, url, json) {
   while (retryCount < 2) {
     if (retryCount > 0) console.log("retry", url, retryCount);
     await new Promise((resolve) =>
-      retryCount > 0 ? setTimeout(resolve, 20000) : resolve()
+      retryCount > 0 ? setTimeout(resolve, 10000) : resolve()
     );
     const res = await safeFetch(method, url, option)
       .then((res) => {
@@ -83,6 +83,7 @@ async function fetchJson(method, url, json) {
     if (res === false) return false;
     if (res !== null) return res;
     retryCount += 1;
+    console.log("retry", url, retryCount);
   }
   return false;
 }
