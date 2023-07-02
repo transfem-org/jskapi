@@ -134,6 +134,7 @@ getInstancesInfos()
     const infoQueue = new Queue(128);
     const instancesInfosPromises = [];
 
+    /*
     for (const instance of alives) {
       try {
         if (instance.meta.bannerUrl) {
@@ -282,7 +283,7 @@ getInstancesInfos()
       catch (e) {
         console.error(`error while processing instance ${instance.url}`, e);
       }
-    }
+    } */
 
     await Promise.allSettled(instancesInfosPromises);
 
