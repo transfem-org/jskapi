@@ -60,7 +60,7 @@
 - url: calc.04.si
 - url: lamp.leemoon.network
 - url: photography.enjoyer.network
-- url: fedi.omada.cafe
+# - url: fedi.omada.cafe
 - url: federation.network
 - url: procial.tchncs.de
 - url: relib.re
@@ -74,6 +74,6 @@
 - url: himagine.club
 - url: mk.slipfox.xyz
 - url: social.contexto.space
-- url: www.foxyhole.io
+# - url: www.foxyhole.io
 - url: sakurajima.social
 - url: gamerplus.org
