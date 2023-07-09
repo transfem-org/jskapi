@@ -41,7 +41,7 @@ function safeFetch(
       },
       async (e) => {
         console.log("POST failed...", url, e.errno, e.type);
-        if (e.errno?.toLowerCase().includes("timeout") || e.type === "aborted")
+        if (e.message?.toLowerCase().includes("timeout") || e.type === "aborted")
           return null;
         return false;
       }
@@ -176,7 +176,7 @@ async function getNodeinfo(
     })
     .catch(async (e) => {
       console.log("Get Nodeinfo failed...", link.href, e.errno, e.type);
-      if (e.errno?.toLowerCase().includes("timeout") || e.type === "aborted")
+      if (e.message?.toLowerCase().includes("timeout") || e.type === "aborted")
         return null;
       return;
     })
