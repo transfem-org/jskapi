@@ -10,7 +10,7 @@
 # description: 説明を上書きします。通常は指定しません。
 # name: サーバー名を上書きします。通常は指定しません。
 #
-- url: calckey.social
+- url: firefish.social
 - url: i.calckey.cloud
 - url: minazukey.uk
 - url: outerkosm.us
@@ -21,7 +21,7 @@
 #- url: m.veenk.org
 - url: calckey.art
 - url: erisly.social
-- url: blahaj.zone
+#- url: blahaj.zone
 #- url: enby.site
 #- url: possum.city
 - url: easymode.im
@@ -59,7 +59,7 @@
 - url: bball.city
 - url: calc.04.si
 - url: lamp.leemoon.network
-- url: photography.enjoyer.network
+#- url: photography.enjoyer.network
 # - url: fedi.omada.cafe
 - url: federation.network
 - url: procial.tchncs.de
