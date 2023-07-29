@@ -40,10 +40,9 @@
 - url: evil.social
 #- url: chaoznekoz.gay
 - url: calckey.aokaga.work
-- url: awkward.company
+#- url: awkward.company
 - url: frcsocial.me
 - url: calckey.nz
-- url: yql.social
 - url: social.aunaturel.club
 # - url: calckey.pl
 - url: hub.adrelien.com
@@ -91,3 +90,6 @@
 - url: firefish.tech
 - url: nsfw.social
 - url: nsfw.lgbt
+- url: fedi.fish
+- url: hol.ogra.ph
+- url: firefish.community
