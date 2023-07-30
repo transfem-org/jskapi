@@ -11,7 +11,7 @@
 # name: サーバー名を上書きします。通常は指定しません。
 #
 - url: firefish.social
-- url: i.calckey.cloud
+#- url: i.calckey.cloud
 - url: minazukey.uk
 #- url: outerkosm.us
 - url: calckey.jp
@@ -42,7 +42,7 @@
 - url: calckey.aokaga.work
 #- url: awkward.company
 #- url: frcsocial.me
-- url: calckey.nz
+- url: firefish.nz
 - url: social.aunaturel.club
 # - url: calckey.pl
 - url: hub.adrelien.com
