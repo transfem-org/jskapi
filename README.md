@@ -1,7 +1,7 @@
 # api
-joinmisskey servers' information api forked for Calckey
+joinmisskey servers' information api forked for Sharkey
 
-https://api.calckey.org/instances.json
+https://api.joinsharkey.org/instances.json
 
 ## Running locally
 
