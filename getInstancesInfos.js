@@ -11,7 +11,7 @@ const instances = loadyaml("./data/instances.yml");
 const pqueue = new Queue(128);
 
 const ua =
-  "JoinFirefish/0.1.0; +https://joinfirefish.org/join";
+  "JoinSharkey/0.1.0; +https://joinsharkey.org/join";
 
 function safeFetch(
   method,
@@ -57,7 +57,7 @@ async function fetchJson(method, url, json) {
     headers: {
       "Content-Type": "application/json",
       "User-Agent":
-        "JoinFirefish/0.1.0; +https://joinfirefish.org/join",
+        "JoinSharkey/0.1.0; +https://joinsharkey.org/join",
     },
     redirect: "error",
   };
