@@ -34,7 +34,7 @@ async function downloadTemp(name, url, tempDir, alwaysReturn) {
       signal: controller.signal,
       headers: {
         "User-Agent":
-          "JoinFirefish/0.1.0; +https://joinfirefish.org/join",
+          "JoinSharkey/0.1.0; +https://joinsharkey.org/join",
       },
     }).then(
       (res) => {
