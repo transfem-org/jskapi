@@ -10,6 +10,7 @@
 # description: 説明を上書きします。通常は指定しません。
 # name: サーバー名を上書きします。通常は指定しません。
 #
+- url: shonk.social
 - url: transfem.social
 - url: ambrosia.moe
 - url: kitsunes.gay
